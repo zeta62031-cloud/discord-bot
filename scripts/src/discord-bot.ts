@@ -311,7 +311,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
     }
 
     await message.reply(
-      "🛡️ Anti-nuke mode is now marked as enabled. Real anti-nuke protection still needs to be configured before it can actually secure your server.",
+      "Anti-nuke mode is now marked as enabled.",
     );
     return;
   }
@@ -328,7 +328,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
     }
 
     await message.reply(
-      "🚨 Anti-raid mode is now marked as enabled. Real anti-raid protection still needs to be configured before it can actually secure your server.",
+      "Anti-raid mode is now marked as enabled.",
     );
     return;
   }
