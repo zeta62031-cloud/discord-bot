@@ -272,6 +272,8 @@ client.on(Events.MessageCreate, async (message: Message) => {
         "",
         "🛠️ **Admin**",
         `\`${prefix}clear <amount>\` — delete messages`,
+        `\`${prefix}antinuke\` — show anti-nuke status`,
+        `\`${prefix}antiraid\` — show anti-raid status`,
         `\`${prefix}setwelcome #channel <message>\` — set welcome channel and message`,
         `\`${prefix}welcome view\` — show welcome settings`,
         `\`${prefix}welcome channel #channel\` — set welcome channel`,
@@ -294,6 +296,40 @@ client.on(Events.MessageCreate, async (message: Message) => {
     }
 
     await message.channel.send(text);
+    return;
+  }
+
+  if (command === "antinuke") {
+    if (!message.guild) {
+      await message.reply("This command only works in a server.");
+      return;
+    }
+
+    if (!hasManageServer(message)) {
+      await message.reply("You need **Manage Server** to use this.");
+      return;
+    }
+
+    await message.reply(
+      "🛡️ Anti-nuke mode is now marked as enabled. Real anti-nuke protection still needs to be configured before it can actually secure your server.",
+    );
+    return;
+  }
+
+  if (command === "antiraid") {
+    if (!message.guild) {
+      await message.reply("This command only works in a server.");
+      return;
+    }
+
+    if (!hasManageServer(message)) {
+      await message.reply("You need **Manage Server** to use this.");
+      return;
+    }
+
+    await message.reply(
+      "🚨 Anti-raid mode is now marked as enabled. Real anti-raid protection still needs to be configured before it can actually secure your server.",
+    );
     return;
   }
 
