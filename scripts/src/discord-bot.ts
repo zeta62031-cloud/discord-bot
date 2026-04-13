@@ -147,6 +147,7 @@ client.on(Events.GuildCreate, async (guild: Guild) => {
         "🛡️ This bot is built to help keep your server **secure, safe, and protected**.",
         "⚔️ Features include anti-nuke, anti-raid, bump tools, and server protection commands.",
         "✨ Use it to help protect your community and keep things running smoothly.",
+        "❓ If you need help, type `,help` in chat for a full list of commands.",
         "",
         "📌 **Prefix:** `,`",
         "🔗 **Support Server:** https://discord.gg/clubiris",
