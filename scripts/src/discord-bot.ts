@@ -89,6 +89,31 @@ function getMentionedOrAuthor(message: Message) {
   return message.mentions.users.first() ?? message.author;
 }
 
+function findSendableTextChannel(guild: Guild, preferredChannelId?: string) {
+  const me = guild.members.me;
+  const preferredChannel = preferredChannelId
+    ? guild.channels.cache.get(preferredChannelId)
+    : undefined;
+  const channels = [
+    preferredChannel,
+    guild.systemChannel,
+    ...guild.channels.cache.values(),
+  ];
+
+  return channels.find((guildChannel) => {
+    if (!guildChannel || guildChannel.type !== ChannelType.GuildText || !me) {
+      return false;
+    }
+
+    return guildChannel
+      .permissionsFor(me)
+      ?.has([
+        PermissionsBitField.Flags.ViewChannel,
+        PermissionsBitField.Flags.SendMessages,
+      ]);
+  });
+}
+
 if (!token) {
   console.error(
     "Missing TOKEN. Add your Discord bot token as a private secret named TOKEN.",
@@ -112,34 +137,34 @@ client.once(Events.ClientReady, (readyClient) => {
 
 client.on(Events.GuildCreate, async (guild: Guild) => {
   const me = guild.members.me;
+  let inviter;
 
-  if (
-    !me
-    || !me.permissions.has(PermissionsBitField.Flags.ViewAuditLog)
-  ) {
+  if (!me || !me.permissions.has(PermissionsBitField.Flags.ViewAuditLog)) {
     console.warn(
-      `Cannot DM inviter for ${guild.name}: missing View Audit Log permission`,
+      `Cannot find inviter for ${guild.name}: missing View Audit Log permission`,
     );
-    return;
+  } else {
+    try {
+      const auditLogs = await guild.fetchAuditLogs({
+        type: AuditLogEvent.BotAdd,
+        limit: 5,
+      });
+
+      const botAddLog = auditLogs.entries.find((entry) => {
+        return entry.target?.id === client.user?.id;
+      });
+
+      inviter = botAddLog?.executor;
+
+      if (!inviter) {
+        console.warn(`Cannot find inviter for ${guild.name}: inviter not found`);
+      }
+    } catch (error) {
+      console.warn(`Could not find inviter for ${guild.name}`, error);
+    }
   }
 
-  try {
-    const auditLogs = await guild.fetchAuditLogs({
-      type: AuditLogEvent.BotAdd,
-      limit: 5,
-    });
-
-    const botAddLog = auditLogs.entries.find((entry) => {
-      return entry.target?.id === client.user?.id;
-    });
-
-    const inviter = botAddLog?.executor;
-
-    if (!inviter) {
-      console.warn(`Cannot DM inviter for ${guild.name}: inviter not found`);
-      return;
-    }
-
+  if (inviter) {
     await inviter.send(
       [
         "💜 **Thank you for adding the bot to your server!**",
@@ -152,10 +177,27 @@ client.on(Events.GuildCreate, async (guild: Guild) => {
         "📌 **Prefix:** `,`",
         "🔗 **Support Server:** https://discord.gg/clubiris",
       ].join("\n"),
-    );
-  } catch (error) {
-    console.warn(`Could not DM inviter for ${guild.name}`, error);
+    ).catch((error) => {
+      console.warn(`Could not DM inviter for ${guild.name}`, error);
+    });
   }
+
+  const channel = findSendableTextChannel(guild);
+
+  if (!channel || channel.type !== ChannelType.GuildText) {
+    console.warn(`No server intro channel found in ${guild.name}`);
+    return;
+  }
+
+  await channel.send(
+    [
+      `${inviter ? `<@${inviter.id}> ` : ""}💜 **Thanks for adding me to ${guild.name}!**`,
+      "",
+      "❓ If you need help, type `,help` in chat for a full list of commands.",
+      "📌 **Prefix:** `,`",
+      "🔗 **Support Server:** https://discord.gg/clubiris",
+    ].join("\n"),
+  );
 });
 
 client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
@@ -170,25 +212,10 @@ client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
     member,
   );
   const me = member.guild.members.me;
-  const configuredChannel = guildConfig.welcome.channelId
-    ? member.guild.channels.cache.get(guildConfig.welcome.channelId)
-    : undefined;
-
-  const channel =
-    configuredChannel ??
-    member.guild.systemChannel ??
-    member.guild.channels.cache.find((guildChannel) => {
-      if (guildChannel.type !== ChannelType.GuildText || !me) {
-        return false;
-      }
-
-      return guildChannel
-        .permissionsFor(me)
-        ?.has([
-          PermissionsBitField.Flags.ViewChannel,
-          PermissionsBitField.Flags.SendMessages,
-        ]);
-    });
+  const channel = findSendableTextChannel(
+    member.guild,
+    guildConfig.welcome.channelId,
+  );
 
   if (!channel || channel.type !== ChannelType.GuildText) {
     console.warn(`No welcome channel found in ${member.guild.name}`);
