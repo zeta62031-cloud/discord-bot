@@ -1,12 +1,15 @@
 import {
+  ChannelType,
   Client,
   Events,
   GatewayIntentBits,
+  PermissionsBitField,
+  type GuildMember,
   type Message,
 } from "discord.js";
 
 const token = process.env.TOKEN ?? process.env.DISCORD_BOT_TOKEN;
-const prefix = process.env.DISCORD_BOT_PREFIX ?? "!";
+const prefix = process.env.DISCORD_BOT_PREFIX ?? ",";
 
 if (!token) {
   console.error(
@@ -18,6 +21,7 @@ if (!token) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
@@ -26,6 +30,33 @@ const client = new Client({
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Discord bot is online as ${readyClient.user.tag}`);
   console.log(`Command prefix: ${prefix}`);
+});
+
+client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
+  const welcomeMessage = `welcome ${member} have a nice time and rep /clubiris in your status for pic perms`;
+  const me = member.guild.members.me;
+
+  const channel =
+    member.guild.systemChannel ??
+    member.guild.channels.cache.find((guildChannel) => {
+      if (guildChannel.type !== ChannelType.GuildText || !me) {
+        return false;
+      }
+
+      return guildChannel
+        .permissionsFor(me)
+        ?.has([
+          PermissionsBitField.Flags.ViewChannel,
+          PermissionsBitField.Flags.SendMessages,
+        ]);
+    });
+
+  if (!channel || channel.type !== ChannelType.GuildText) {
+    console.warn(`No welcome channel found in ${member.guild.name}`);
+    return;
+  }
+
+  await channel.send(welcomeMessage);
 });
 
 client.on(Events.MessageCreate, async (message: Message) => {

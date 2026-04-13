@@ -30,6 +30,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 ## Discord Bot
 
 - Bot code lives in `scripts/src/discord-bot.ts`.
-- Requires a private secret named `DISCORD_BOT_TOKEN`.
-- Optional secret/env var: `DISCORD_BOT_PREFIX` defaults to `!`.
-- Starter commands: `!ping`, `!help`, and `!say <message>`.
+- Requires a private secret named `TOKEN` or `DISCORD_BOT_TOKEN`.
+- Optional secret/env var: `DISCORD_BOT_PREFIX` defaults to `,`.
+- Starter commands: `,ping`, `,help`, and `,say <message>`.
+- Welcome messages require Discord's Server Members Intent to be enabled.
