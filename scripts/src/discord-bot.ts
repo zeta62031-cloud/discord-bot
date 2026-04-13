@@ -65,7 +65,16 @@ client.on(Events.GuildCreate, async (guild: Guild) => {
     }
 
     await inviter.send(
-      "tysm for adding the bot to your server the prefix is , and join our support server https://discord.gg/clubiris",
+      [
+        "💜 **Thank you for adding the bot to your server!**",
+        "",
+        "🛡️ This bot is built to help keep your server **secure, safe, and protected**.",
+        "⚔️ Features include anti-nuke, anti-raid, bump tools, and server protection commands.",
+        "✨ Use it to help protect your community and keep things running smoothly.",
+        "",
+        "📌 **Prefix:** `,`",
+        "🔗 **Support Server:** https://discord.gg/clubiris",
+      ].join("\n"),
     );
   } catch (error) {
     console.warn(`Could not DM inviter for ${guild.name}`, error);
