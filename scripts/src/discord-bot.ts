@@ -1,7 +1,9 @@
 import {
+  AuditLogEvent,
   ChannelType,
   Client,
   Events,
+  type Guild,
   GatewayIntentBits,
   PermissionsBitField,
   type GuildMember,
@@ -30,6 +32,44 @@ const client = new Client({
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Discord bot is online as ${readyClient.user.tag}`);
   console.log(`Command prefix: ${prefix}`);
+});
+
+client.on(Events.GuildCreate, async (guild: Guild) => {
+  const me = guild.members.me;
+
+  if (
+    !me
+    || !me.permissions.has(PermissionsBitField.Flags.ViewAuditLog)
+  ) {
+    console.warn(
+      `Cannot DM inviter for ${guild.name}: missing View Audit Log permission`,
+    );
+    return;
+  }
+
+  try {
+    const auditLogs = await guild.fetchAuditLogs({
+      type: AuditLogEvent.BotAdd,
+      limit: 5,
+    });
+
+    const botAddLog = auditLogs.entries.find((entry) => {
+      return entry.target?.id === client.user?.id;
+    });
+
+    const inviter = botAddLog?.executor;
+
+    if (!inviter) {
+      console.warn(`Cannot DM inviter for ${guild.name}: inviter not found`);
+      return;
+    }
+
+    await inviter.send(
+      "tysm for adding the bot to your server the prefix is , and join our support server https://discord.gg/clubiris",
+    );
+  } catch (error) {
+    console.warn(`Could not DM inviter for ${guild.name}`, error);
+  }
 });
 
 client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
