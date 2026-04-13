@@ -5,12 +5,12 @@ import {
   type Message,
 } from "discord.js";
 
-const token = process.env.DISCORD_BOT_TOKEN;
+const token = process.env.TOKEN ?? process.env.DISCORD_BOT_TOKEN;
 const prefix = process.env.DISCORD_BOT_PREFIX ?? "!";
 
 if (!token) {
   console.error(
-    "Missing DISCORD_BOT_TOKEN. Add your Discord bot token as a private secret named DISCORD_BOT_TOKEN.",
+    "Missing TOKEN. Add your Discord bot token as a private secret named TOKEN.",
   );
   process.exit(1);
 }
