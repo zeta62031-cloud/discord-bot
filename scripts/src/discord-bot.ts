@@ -1661,17 +1661,13 @@ function createBotClient(token: string) {
     );
   });
 
-  // ─── Error Handler ────────────────────────────────────────────────────────
+ // ─── Start the bot ───────────────────────────────────────────────────────────
 
-  client.on(Events.Error, (err) => {
-    logger.error({ err }, "Discord client error");
-  });
+const token = process.env.TOKEN;
 
-  client.login(token).catch((err) => {
-    logger.error({ err }, "Failed to login to Discord — check that the token is valid");
-  });
+if (!token) {
+  console.error("❌ No TOKEN found. Set it using:  set TOKEN=YOUR_TOKEN_HERE");
+  process.exit(1);
 }
 
-export function startBot(token: string) {
-  createBotClient(token);
-}
+startBot(token);
