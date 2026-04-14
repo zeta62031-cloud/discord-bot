@@ -16,7 +16,31 @@ import {
   EmbedBuilder,
   type Guild,
 } from "discord.js";
-import { logger } from "./lib/logger";
+
+// Simple built-in logger to replace external ./lib/logger
+const logger = {
+  info: (data?: unknown, msg?: string) => {
+    if (msg) {
+      console.log("[INFO]", msg, data ?? "");
+    } else {
+      console.log("[INFO]", data ?? "");
+    }
+  },
+  error: (data?: unknown, msg?: string) => {
+    if (msg) {
+      console.error("[ERROR]", msg, data ?? "");
+    } else {
+      console.error("[ERROR]", data ?? "");
+    }
+  },
+  warn: (data?: unknown, msg?: string) => {
+    if (msg) {
+      console.warn("[WARN]", msg, data ?? "");
+    } else {
+      console.warn("[WARN]", data ?? "");
+    }
+  },
+};
 
 const PREFIX = ",";
 const SUPPORT_SERVER = "https://discord.gg/flipall";
