@@ -33,6 +33,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Requires a private secret named `TOKEN` or `DISCORD_BOT_TOKEN`.
 - Optional secret/env var: `DISCORD_BOT_PREFIX` defaults to `,`.
 - Commands include `,help`, `,ping`, `,say`, `,avatar`, `,userinfo`, `,serverinfo`, `,botinfo`, `,membercount`, `,uptime`, `,support`, `,invite`, `,coinflip`, `,roll`, `,choose`, and `,clear`.
+- Status reward command: `,setstatusrole @role flipall` configures `/flipall` custom status rewards and posts the vanity rewards message.
 - Welcome messages require Discord's Server Members Intent to be enabled.
 - Welcome settings are configured per server through Discord commands: `,setwelcome`, `,welcome view`, `,welcome channel`, `,welcome message`, `,welcome test`, `,welcome on`, and `,welcome off`.
 - Welcome config is stored at runtime in `scripts/data/guild-config.json`.

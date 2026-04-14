@@ -1,4 +1,5 @@
 import {
+  ActivityType,
   AuditLogEvent,
   ChannelType,
   Client,
@@ -8,6 +9,7 @@ import {
   PermissionsBitField,
   type GuildMember,
   type Message,
+  type Presence,
 } from "discord.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -25,7 +27,15 @@ type GuildWelcomeConfig = {
   message: string;
 };
 
+type GuildStatusRewardConfig = {
+  channelId?: string;
+  enabled: boolean;
+  keyword?: string;
+  roleId?: string;
+};
+
 type GuildConfig = {
+  statusReward: GuildStatusRewardConfig;
   welcome: GuildWelcomeConfig;
 };
 
@@ -52,10 +62,22 @@ function saveConfigs() {
 
 function getGuildConfig(guildId: string): GuildConfig {
   guildConfigs[guildId] ??= {
+    statusReward: {
+      enabled: false,
+    },
     welcome: {
       enabled: true,
       message: defaultWelcomeMessage,
     },
+  };
+
+  guildConfigs[guildId].statusReward ??= {
+    enabled: false,
+  };
+
+  guildConfigs[guildId].welcome ??= {
+    enabled: true,
+    message: defaultWelcomeMessage,
   };
 
   return guildConfigs[guildId];
@@ -85,8 +107,68 @@ function hasManageServer(message: Message) {
   );
 }
 
+function hasStatusRewardPermission(message: Message) {
+  return Boolean(
+    message.member?.permissions.has(PermissionsBitField.Flags.Administrator)
+    || message.member?.permissions.has(PermissionsBitField.Flags.ManageChannels),
+  );
+}
+
 function getMentionedOrAuthor(message: Message) {
   return message.mentions.users.first() ?? message.author;
+}
+
+function normalizeStatusKeyword(keyword: string) {
+  const cleanKeyword = keyword.trim();
+  return cleanKeyword.startsWith("/") ? cleanKeyword : `/${cleanKeyword}`;
+}
+
+function getCustomStatusText(presence: Presence) {
+  return presence.activities
+    .filter((activity) => activity.type === ActivityType.Custom)
+    .map((activity) => activity.state ?? activity.name)
+    .join(" ");
+}
+
+async function syncStatusReward(presence: Presence) {
+  const guild = presence.guild;
+
+  if (!guild) {
+    return;
+  }
+
+  const guildConfig = getGuildConfig(guild.id);
+  const statusReward = guildConfig.statusReward;
+
+  if (!statusReward.enabled || !statusReward.roleId || !statusReward.keyword) {
+    return;
+  }
+
+  const member =
+    presence.member ??
+    await guild.members.fetch(presence.userId).catch(() => undefined);
+  const role = guild.roles.cache.get(statusReward.roleId);
+
+  if (!member || member.user.bot || !role) {
+    return;
+  }
+
+  const statusText = getCustomStatusText(presence).toLowerCase();
+  const hasKeyword = statusText.includes(statusReward.keyword.toLowerCase());
+  const hasRole = member.roles.cache.has(role.id);
+
+  if (hasKeyword && !hasRole) {
+    await member.roles.add(role).catch((error) => {
+      console.warn(`Could not add status reward role in ${guild.name}`, error);
+    });
+    return;
+  }
+
+  if (!hasKeyword && hasRole) {
+    await member.roles.remove(role).catch((error) => {
+      console.warn(`Could not remove status reward role in ${guild.name}`, error);
+    });
+  }
 }
 
 function findSendableTextChannel(guild: Guild, preferredChannelId?: string) {
@@ -126,6 +208,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.MessageContent,
   ],
 });
@@ -225,6 +308,10 @@ client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
   await channel.send(welcomeMessage);
 });
 
+client.on(Events.PresenceUpdate, async (_oldPresence, newPresence) => {
+  await syncStatusReward(newPresence);
+});
+
 client.on(Events.MessageCreate, async (message: Message) => {
   if (message.author.bot || !message.content.startsWith(prefix)) {
     return;
@@ -274,6 +361,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
         `\`${prefix}clear <amount>\` — delete messages`,
         `\`${prefix}antinuke\` — show anti-nuke status`,
         `\`${prefix}antiraid\` — show anti-raid status`,
+        `\`${prefix}setstatusrole @role flipall\` — configure vanity status rewards`,
         `\`${prefix}setwelcome #channel <message>\` — set welcome channel and message`,
         `\`${prefix}welcome view\` — show welcome settings`,
         `\`${prefix}welcome channel #channel\` — set welcome channel`,
@@ -468,6 +556,55 @@ client.on(Events.MessageCreate, async (message: Message) => {
         sent.delete().catch(() => undefined);
       }, 3000);
     });
+    return;
+  }
+
+  if (command === "setstatusrole") {
+    if (!message.guild || message.channel.type !== ChannelType.GuildText) {
+      await message.reply("This command only works in a server text channel.");
+      return;
+    }
+
+    if (!hasStatusRewardPermission(message)) {
+      await message.reply(
+        "Only server admins or people with **Manage Channels** permission can use this command.",
+      );
+      return;
+    }
+
+    const role = message.mentions.roles.first();
+    const rawKeyword = args.slice(1).join(" ").trim();
+
+    if (!role || !rawKeyword) {
+      await message.reply(
+        `Use it like this: \`${prefix}setstatusrole @role flipall\``,
+      );
+      return;
+    }
+
+    const keyword = normalizeStatusKeyword(rawKeyword);
+    const guildConfig = getGuildConfig(message.guild.id);
+    guildConfig.statusReward = {
+      channelId: message.channel.id,
+      enabled: true,
+      keyword,
+      roleId: role.id,
+    };
+    saveConfigs();
+
+    await message.channel.send(
+      [
+        "📡 **Vanity Status Rewards**",
+        `Put **${keyword}** in your Discord custom status to earn a reward role automatically!`,
+        "",
+        "The bot monitors statuses in real time — add the keyword and you'll get the role. Remove it and the role will be taken away.",
+        "",
+        `Use \`${prefix}setstatusrole @role flipall\` to configure the reward.`,
+        "This command can only be used by server admins or people with **Manage Channels** permission.",
+        "",
+        "Support: https://discord.gg/flipall",
+      ].join("\n"),
+    );
     return;
   }
 
