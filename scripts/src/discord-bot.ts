@@ -1595,73 +1595,11 @@ function createBotClient(token: string) {
     }
   });
 
-  // ─── Guild Create (DM owner when bot is added) ───────────────────────────
+    // ─── Guild Create (DM owner when bot is added) ───────────────────────────
 
-  client.on(Events.GuildCreate, async (guild) => {
-    // Restore join-to-create on guild load
-    const jtc = guild.channels.cache.find((c) => c.name === "Join to Create" && c.type === ChannelType.GuildVoice);
-    if (jtc) joinToCreateChannels.add(jtc.id);
+// (your existing event handlers above...)
 
-    await ensureFlipallRole(guild).catch(() => undefined);
-
-    const owner = await guild.fetchOwner().catch(() => null);
-    if (!owner) return;
-    await owner.send({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0x5865F2)
-          .setTitle("🎉 Thanks for adding flipall to your server!")
-          .setDescription(
-            "Hey! We're excited to be part of your community. Here's what the bot brings:\n\n" +
-            "🔒 **Server Security** — moderation, jail system, private logs\n" +
-            "📈 **Server Bumping** — help more people find and join your server\n" +
-            "🎮 **500+ Commands** — general, fun, utility, moderation & more\n" +
-            "🎙️ **VoiceMaster** — dynamic voice channels that create & delete themselves\n" +
-            "📡 **Status Rewards** — automatically reward members who promote your server\n" +
-            "💨 **Snipe** — catch deleted messages with `,s`\n\n" +
-            "Type `,help` in your server to get started!\n\n" +
-            `━━━━━━━━━━━━━━━━━━━━━━\n**Support Server:** ${SUPPORT_SERVER}`,
-          ),
-      ],
-    }).catch(() => undefined);
-  });
-
-  // ─── Presence Update (Status Rewards) ────────────────────────────────────
-
-  client.on(Events.PresenceUpdate, async (_oldPresence, newPresence) => {
-    const guild = newPresence.guild;
-    const member = newPresence.member;
-    if (!guild || !member || member.user.bot) return;
-    const config = statusRewardConfig.get(guild.id);
-    if (!config) return;
-    const role = guild.roles.cache.get(config.roleId);
-    if (!role) return;
-    const customStatus = newPresence.activities.find((a) => a.type === 4)?.state ?? "";
-    const hasKeyword = customStatus.toLowerCase().includes(config.keyword.toLowerCase());
-    const activeSet = statusRewardActive.get(guild.id) ?? new Set<string>();
-    statusRewardActive.set(guild.id, activeSet);
-    if (hasKeyword && !activeSet.has(member.id)) {
-      await member.roles.add(role, "Status reward").catch(() => undefined);
-      activeSet.add(member.id);
-      await logToChannel(guild as unknown as Message["guild"], `📡 **Status Reward:** <@${member.id}> received <@&${role.id}> for having **${config.keyword}** in their status.`);
-    } else if (!hasKeyword && activeSet.has(member.id)) {
-      await member.roles.remove(role, "Status reward removed").catch(() => undefined);
-      activeSet.delete(member.id);
-      await logToChannel(guild as unknown as Message["guild"], `📡 **Status Reward Removed:** <@${member.id}> lost <@&${role.id}> — keyword no longer in status.`);
-    }
-  });
-
-  // ─── DM Handler ──────────────────────────────────────────────────────────
-
-  client.on(Events.MessageCreate, async (message: Message) => {
-    if (message.author.bot) return;
-    if (message.guild) return;
-    await message.reply(
-      `👋 Hey **${message.author.username}**! Thanks for reaching out.\n\nJoin our community server here: ${SUPPORT_SERVER}`,
-    );
-  });
-
- // ─── Start the bot ───────────────────────────────────────────────────────────
+} // ← closes createBotClient
 
 const token = process.env.TOKEN;
 
@@ -1670,4 +1608,4 @@ if (!token) {
   process.exit(1);
 }
 
-startBot(token);
+createBotClient(token); // ← FIXED
