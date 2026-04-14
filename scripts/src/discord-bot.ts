@@ -1595,9 +1595,11 @@ function createBotClient(token: string) {
     }
   });
 
-    // ─── Guild Create (DM owner when bot is added) ───────────────────────────
+     // ─── Guild Create (DM owner when bot is added) ───────────────────────────
 
-// (your existing event handlers above...)
+  // (your event handlers above...)
+
+  client.login(token); // ← ADD THIS LINE
 
 } // ← closes createBotClient
 
@@ -1608,4 +1610,4 @@ if (!token) {
   process.exit(1);
 }
 
-createBotClient(token); // ← FIXED
+createBotClient(token);
