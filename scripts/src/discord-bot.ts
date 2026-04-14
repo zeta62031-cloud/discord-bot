@@ -123,6 +123,20 @@ function normalizeStatusKeyword(keyword: string) {
   return cleanKeyword.startsWith("/") ? cleanKeyword : `/${cleanKeyword}`;
 }
 
+function buildVanityStatusMessage(keyword = "/flipall") {
+  return [
+    "📡 **Vanity Status Rewards**",
+    `Put **${keyword}** in your Discord custom status to earn a reward role automatically!`,
+    "",
+    "The bot monitors statuses in real time — add the keyword and you'll get the role. Remove it and the role will be taken away.",
+    "",
+    `Use \`${prefix}setstatusrole @role flipall\` to configure the reward.`,
+    "This command can only be used by server admins or people with **Manage Channels** permission.",
+    "",
+    "Support: https://discord.gg/flipall",
+  ].join("\n");
+}
+
 function getCustomStatusText(presence: Presence) {
   return presence.activities
     .filter((activity) => activity.type === ActivityType.Custom)
@@ -359,6 +373,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
         "",
         "🛠️ **Admin**",
         `\`${prefix}clear <amount>\` — delete messages`,
+        `\`${prefix}setup\` — create the vanity channel and post setup info`,
         `\`${prefix}antinuke\` — show anti-nuke status`,
         `\`${prefix}antiraid\` — show anti-raid status`,
         `\`${prefix}setstatusrole @role flipall\` — configure vanity status rewards`,
@@ -559,6 +574,47 @@ client.on(Events.MessageCreate, async (message: Message) => {
     return;
   }
 
+  if (command === "setup") {
+    if (!message.guild) {
+      await message.reply("This command only works in a server.");
+      return;
+    }
+
+    if (!hasStatusRewardPermission(message)) {
+      await message.reply(
+        "Only server admins or people with **Manage Channels** permission can use this command.",
+      );
+      return;
+    }
+
+    const me = message.guild.members.me;
+
+    if (!me?.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+      await message.reply("I need **Manage Channels** permission to create the vanity channel.");
+      return;
+    }
+
+    const existingVanityChannel = message.guild.channels.cache.find((channel) => {
+      return channel.type === ChannelType.GuildText && channel.name === "vanity";
+    });
+    const vanityChannel = existingVanityChannel && existingVanityChannel.type === ChannelType.GuildText
+      ? existingVanityChannel
+      : await message.guild.channels.create({
+        name: "vanity",
+        type: ChannelType.GuildText,
+      });
+    const guildConfig = getGuildConfig(message.guild.id);
+
+    guildConfig.statusReward.channelId = vanityChannel.id;
+    saveConfigs();
+
+    await vanityChannel.send(
+      buildVanityStatusMessage(guildConfig.statusReward.keyword ?? "/flipall"),
+    );
+    await message.reply(`✅ Vanity setup message sent in ${vanityChannel}.`);
+    return;
+  }
+
   if (command === "setstatusrole") {
     if (!message.guild || message.channel.type !== ChannelType.GuildText) {
       await message.reply("This command only works in a server text channel.");
@@ -592,19 +648,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
     };
     saveConfigs();
 
-    await message.channel.send(
-      [
-        "📡 **Vanity Status Rewards**",
-        `Put **${keyword}** in your Discord custom status to earn a reward role automatically!`,
-        "",
-        "The bot monitors statuses in real time — add the keyword and you'll get the role. Remove it and the role will be taken away.",
-        "",
-        `Use \`${prefix}setstatusrole @role flipall\` to configure the reward.`,
-        "This command can only be used by server admins or people with **Manage Channels** permission.",
-        "",
-        "Support: https://discord.gg/flipall",
-      ].join("\n"),
-    );
+    await message.channel.send(buildVanityStatusMessage(keyword));
     return;
   }
 

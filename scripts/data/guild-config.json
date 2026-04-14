@@ -1,0 +1,14 @@
+{
+  "1493299683819520110": {
+    "statusReward": {
+      "channelId": "1493299684255600641",
+      "enabled": true,
+      "keyword": "/flipall",
+      "roleId": "1493302060643258593"
+    },
+    "welcome": {
+      "enabled": true,
+      "message": "welcome {user} have a nice time and rep /clubiris in your status for pic perms"
+    }
+  }
+}
