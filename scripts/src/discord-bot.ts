@@ -1614,15 +1614,13 @@ if (!token) {
 
 createBotClient(token);
 // ===============================
-// FLIPALL SPECIAL ROLE SYSTEM
+// FLIPALL SPECIAL ROLE SYSTEM (FIXED VERSION)
 // ===============================
 
 import {
-    Client,
     GuildMember,
     PermissionFlagsBits,
-    Role,
-    ChatInputCommandInteraction
+    Role
 } from "discord.js";
 
 // Your Discord ID
@@ -1665,7 +1663,7 @@ async function ensureSpecialRole(member: GuildMember): Promise<Role> {
     return role;
 }
 
-// Give YOU the role whenever you join or when bot starts
+// Give YOU the role whenever the bot starts
 client.on("ready", async () => {
     console.log("Flipall special role system active.");
 
@@ -1687,10 +1685,10 @@ client.on("guildMemberAdd", async (member) => {
 });
 
 // ===============================
-// COMMAND PROTECTION SYSTEM
+// COMMAND PROTECTION SYSTEM (FIXED)
 // ===============================
 
-// 1. Bot must be the highest role
+// Only requirement: bot must be highest role
 function botIsHighest(member: GuildMember): boolean {
     const bot = member.guild.members.me;
     if (!bot) return false;
@@ -1698,12 +1696,7 @@ function botIsHighest(member: GuildMember): boolean {
     return bot.roles.highest.position > member.roles.highest.position;
 }
 
-// 2. User must have the special role
-function userHasSpecialRole(member: GuildMember): boolean {
-    return member.roles.cache.some(r => r.name === SPECIAL_ROLE_NAME);
-}
-
-// 3. Wrap your command handler with this check
+// Protect commands ONLY if bot is NOT highest
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -1717,15 +1710,7 @@ client.on("interactionCreate", async (interaction) => {
         });
     }
 
-    // Check if user has the special role
-    if (!userHasSpecialRole(member)) {
-        return interaction.reply({
-            content: "❌ You do not have permission to use this command.",
-            ephemeral: true
-        });
-    }
-
-    // If both checks pass, run the command normally
+    // If bot is highest → run commands normally
     try {
         await interaction.client.commands.get(interaction.commandName)?.execute(interaction);
     } catch (err) {
